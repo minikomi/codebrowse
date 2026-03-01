@@ -8,7 +8,7 @@ User=exedev
 Group=exedev
 WorkingDirectory=/home/exedev/filebrowser
 Environment=FB_ROOT=/home/exedev/samplematch
-Environment=FB_PORT=8000
+Environment=FB_PORT=8888
 Environment=FB_TITLE=SampleMatch Code
 ExecStart=/home/exedev/filebrowser/.venv/bin/python /home/exedev/filebrowser/app.py
 Restart=on-failure
