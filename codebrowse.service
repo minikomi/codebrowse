@@ -1,0 +1,18 @@
+[Unit]
+Description=codebrowse
+After=network.target
+
+[Service]
+Type=simple
+User=exedev
+Group=exedev
+WorkingDirectory=/home/exedev/codebrowse
+Environment=FB_ROOT=/path/to/code
+Environment=FB_PORT=8000
+Environment=FB_TITLE=Code Browser
+ExecStart=/home/exedev/.local/bin/uv run python app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

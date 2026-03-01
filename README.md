@@ -1,12 +1,18 @@
-# File Browser
+# codebrowse
 
 Minimal file browser with syntax highlighting. Mobile-friendly.
 
 ## Quick Start
 
 ```bash
-pip install flask pygments
-python app.py --root /path/to/code --port 8000 --title "My Code"
+uvx codebrowse --root /path/to/code
+```
+
+Or install:
+
+```bash
+uv pip install codebrowse
+codebrowse --root /path/to/code
 ```
 
 ## Options
@@ -20,20 +26,19 @@ python app.py --root /path/to/code --port 8000 --title "My Code"
 
 ## Deploy with systemd
 
-1. Create virtualenv and install deps:
-   ```bash
-   python -m venv .venv
-   .venv/bin/pip install flask pygments
-   ```
+```bash
+# Clone and setup
+git clone https://github.com/minikomi/codebrowse.git
+cd codebrowse
 
-2. Edit `filebrowser.service` with your settings
+# Edit service file with your settings
+vim codebrowse.service
 
-3. Install and start:
-   ```bash
-   sudo cp filebrowser.service /etc/systemd/system/
-   sudo systemctl daemon-reload
-   sudo systemctl enable --now filebrowser
-   ```
+# Install
+sudo cp codebrowse.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now codebrowse
+```
 
 ## Features
 
