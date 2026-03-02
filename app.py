@@ -55,7 +55,8 @@ def get_tree(root: Path, rel_path: str = '') -> list:
         if should_ignore(entry):
             continue
         item_rel = f"{rel_path}/{entry.name}" if rel_path else entry.name
-        items.append({'name': entry.name, 'path': item_rel, 'is_dir': entry.is_dir()})
+        ext = entry.suffix[1:] if entry.suffix else ''
+        items.append({'name': entry.name, 'path': item_rel, 'is_dir': entry.is_dir(), 'ext': ext})
     return items
 
 
@@ -100,7 +101,7 @@ HTML = '''
             flex-direction: column;
         }
         .sidebar-header {
-            padding: 12px 15px;
+            padding: 8px 12px;
             font-size: 13px;
             font-weight: 600;
             color: var(--text-dim);
@@ -109,6 +110,9 @@ HTML = '''
             top: 0;
             background: var(--sidebar-bg);
             z-index: 5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         #tree { flex: 1; overflow-y: auto; padding: 8px 0; }
         .item {
@@ -148,8 +152,22 @@ HTML = '''
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 12px;
         }
-        .code-header .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .code-header .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .refresh-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .refresh-btn:hover { background: var(--hover); color: var(--text); }
         .code-content { flex: 1; overflow: auto; }
         .highlight { background: transparent !important; }
         .highlight pre {
@@ -222,7 +240,10 @@ HTML = '''
 <body>
     <div class="container">
         <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">📦 {{ title }}</div>
+            <div class="sidebar-header">
+                <span>📦 {{ title }}</span>
+                <button class="refresh-btn" onclick="refreshTree()" title="Refresh tree">↻</button>
+            </div>
             <div id="tree">
                 {% for item in tree %}
                     {% if item.is_dir %}
@@ -233,7 +254,7 @@ HTML = '''
                         <div class="children"></div>
                     </div>
                     {% else %}
-                    <div class="item file" data-ext="{{ item.name.rsplit('.', 1)[-1] if '.' in item.name else '' }}" hx-get="/file/{{ item.path }}" hx-target="#view" onclick="selectFile(this)">
+                    <div class="item file" data-ext="{{ item.ext }}" hx-get="/file/{{ item.path }}" hx-target="#view" onclick="selectFile(this)">
                         <span class="icon"></span>{{ item.name }}
                     </div>
                     {% endif %}
@@ -258,6 +279,22 @@ HTML = '''
             el.parentElement.classList.toggle('open');
             el.classList.toggle('open');
         }
+        let currentFile = null;
+        function setCurrentFile(path) { currentFile = path; }
+        function refreshFile() {
+            if (currentFile) {
+                htmx.ajax('GET', '/file/' + currentFile, '#view');
+            }
+        }
+        function refreshTree() {
+            htmx.ajax('GET', '/tree-full', '#tree');
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                refreshFile();
+            }
+        });
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
         }
@@ -279,7 +316,7 @@ TREE_HTML = '''
         <div class="children"></div>
     </div>
     {% else %}
-    <div class="item file" data-ext="{{ item.name.rsplit('.', 1)[-1] if '.' in item.name else '' }}" hx-get="/file/{{ item.path }}" hx-target="#view" onclick="selectFile(this)">
+    <div class="item file" data-ext="{{ item.ext }}" hx-get="/file/{{ item.path }}" hx-target="#view" onclick="selectFile(this)">
         <span class="icon"></span>{{ item.name }}
     </div>
     {% endif %}
@@ -287,8 +324,12 @@ TREE_HTML = '''
 '''
 
 FILE_HTML = '''
-<div class="code-header"><span class="path">{{ path }}</span></div>
+<div class="code-header">
+    <span class="path">{{ path }}</span>
+    <button class="refresh-btn" onclick="refreshFile()" title="Refresh (r)">↻</button>
+</div>
 <div class="code-content">{{ code|safe }}</div>
+<script>setCurrentFile('{{ path }}')</script>
 '''
 
 
@@ -307,6 +348,12 @@ def tree_view(subpath):
     if not str(full.resolve()).startswith(str(CONFIG['root'])):
         abort(403)
     return render_template_string(TREE_HTML, tree=get_tree(full, subpath))
+
+
+@app.route('/tree-full')
+def tree_full():
+    tree = get_tree(CONFIG['root'])
+    return render_template_string(TREE_HTML, tree=tree)
 
 
 @app.route('/file/<path:subpath>')
